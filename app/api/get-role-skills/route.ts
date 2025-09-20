@@ -114,74 +114,77 @@ function getBeginnerSkills(role: string): string[] {
   return ['Programming Basics', 'Git', 'Problem Solving', 'Communication', 'Learning Skills', 'Project Management'];
 }
 
+// Curated high-quality tutorial videos for common skills
+const curatedVideos: { [key: string]: string } = {
+  'python': 'https://www.youtube.com/watch?v=rfscVS0vtbw',
+  'javascript': 'https://www.youtube.com/watch?v=PkZNo7MFNFg',
+  'react': 'https://www.youtube.com/watch?v=bMknfKXIFA8',
+  'html': 'https://www.youtube.com/watch?v=UB1O30fR-EE',
+  'css': 'https://www.youtube.com/watch?v=yfoY53QXEnI',
+  'sql': 'https://www.youtube.com/watch?v=HXV3zeQKqGY',
+  'git': 'https://www.youtube.com/watch?v=RGOj5yH7evk',
+  'machine learning': 'https://www.youtube.com/watch?v=GwIo3gDZCVQ',
+  'data visualization': 'https://www.youtube.com/watch?v=a9UrKTVEeZA',
+  'excel': 'https://www.youtube.com/watch?v=Vl0H-qTclOg',
+  'statistics': 'https://www.youtube.com/watch?v=xxpc-HPKN28',
+  'data analysis': 'https://www.youtube.com/watch?v=r-uOLxNrNk8',
+  'nodejs': 'https://www.youtube.com/watch?v=TlB_eWDSMt4',
+  'docker': 'https://www.youtube.com/watch?v=fqMOX6JJhGo',
+  'kubernetes': 'https://www.youtube.com/watch?v=X48VuDVv0do'
+};
+
 async function searchYouTube(skill: string): Promise<string> {
   try {
+    // First try curated videos for common skills
+    const normalizedSkill = skill.toLowerCase().trim();
+    
+    // Check for exact match
+    if (curatedVideos[normalizedSkill]) {
+      console.log(`Using curated video for ${skill}`);
+      return curatedVideos[normalizedSkill];
+    }
+    
+    // Check for partial matches
+    for (const [key, video] of Object.entries(curatedVideos)) {
+      if (normalizedSkill.includes(key) || key.includes(normalizedSkill)) {
+        console.log(`Using curated video for ${skill} (matched ${key})`);
+        return video;
+      }
+    }
+    
+    console.log(`Trying YouTube API for skill: ${skill}`);
+    
     if (!process.env.YOUTUBE_API_KEY) {
-      console.log('YouTube API key not found, using fallback URL');
-      return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
+      throw new Error('YouTube API key missing');
     }
 
-    const query = `${skill} tutorial complete course`;
+    const query = `${skill} tutorial`;
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoDuration=long&order=viewCount&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`;
     
-    // Search for videos with specific criteria
-    const searchResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoDuration=long&order=viewCount&maxResults=5&key=${process.env.YOUTUBE_API_KEY}`
-    );
-
+    const searchResponse = await fetch(searchUrl);
+    
     if (!searchResponse.ok) {
-      console.error('YouTube search API failed:', searchResponse.status);
-      return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
+      const errorData = await searchResponse.json();
+      if (errorData.error?.reason === 'quotaExceeded') {
+        console.log('YouTube API quota exceeded, using generic tutorial link');
+        return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
+      }
+      throw new Error(`YouTube API failed: ${searchResponse.status}`);
     }
 
     const searchData = await searchResponse.json();
-    const videos = searchData.items;
     
-    if (!videos || videos.length === 0) {
-      return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
-    }
-
-    // Get video details to filter by duration and stats
-    const videoIds = videos.map((v: any) => v.id.videoId).join(',');
-    const detailsResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds}&key=${process.env.YOUTUBE_API_KEY}`
-    );
-
-    if (!detailsResponse.ok) {
-      // Fallback to first video if details API fails
-      return `https://www.youtube.com/watch?v=${videos[0].id.videoId}`;
-    }
-
-    const detailsData = await detailsResponse.json();
-    
-    // Filter videos that are 20+ minutes and sort by view count
-    const qualifiedVideos = detailsData.items
-      .filter((video: any) => {
-        const duration = video.contentDetails.duration;
-        // Parse ISO 8601 duration (PT20M30S format)
-        const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-        if (!match) return false;
-        
-        const hours = parseInt(match[1] || '0');
-        const minutes = parseInt(match[2] || '0');
-        const totalMinutes = hours * 60 + minutes;
-        
-        return totalMinutes >= 20; // 20+ minutes
-      })
-      .sort((a: any, b: any) => {
-        const aViews = parseInt(a.statistics.viewCount || '0');
-        const bViews = parseInt(b.statistics.viewCount || '0');
-        return bViews - aViews; // Sort by views descending
-      });
-
-    if (qualifiedVideos.length > 0) {
-      return `https://www.youtube.com/watch?v=${qualifiedVideos[0].id}`;
+    if (searchData.items && searchData.items.length > 0) {
+      const videoUrl = `https://www.youtube.com/watch?v=${searchData.items[0].id.videoId}`;
+      console.log(`Found YouTube video for ${skill}: ${videoUrl}`);
+      return videoUrl;
     }
     
-    // Fallback to first video if no qualified videos found
-    return `https://www.youtube.com/watch?v=${videos[0].id.videoId}`;
+    throw new Error('No videos found');
     
   } catch (error) {
-    console.error('YouTube search failed:', error);
+    console.error('YouTube search failed for skill:', skill, 'Error:', error.message);
+    // Return a generic search as last resort
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
   }
 }
