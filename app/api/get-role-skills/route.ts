@@ -190,8 +190,11 @@ async function searchYouTube(skill: string, favoriteChannel?: string): Promise<s
     if (!generalResponse.ok) {
       const errorData = await generalResponse.json();
       if (errorData.error?.reason === 'quotaExceeded') {
-        console.log('YouTube API quota exceeded, using generic tutorial link');
-        throw new Error('Quota exceeded');
+        console.log('YouTube API quota exceeded, using search query with channel');
+        const searchQuery = favoriteChannel 
+          ? `${skill} tutorial ${favoriteChannel}`
+          : `${skill} tutorial`;
+        return `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
       }
       throw new Error(`YouTube API failed: ${generalResponse.status}`);
     }
@@ -208,8 +211,11 @@ async function searchYouTube(skill: string, favoriteChannel?: string): Promise<s
     
   } catch (error) {
     console.error('YouTube search failed for skill:', skill, 'Error:', error instanceof Error ? error.message : String(error));
-    // Return a generic search as last resort
-    return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
+    // Return a search query with favorite channel if specified
+    const searchQuery = favoriteChannel 
+      ? `${skill} tutorial ${favoriteChannel}`
+      : `${skill} tutorial`;
+    return `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
   }
 }
 
