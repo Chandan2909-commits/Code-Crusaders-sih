@@ -183,7 +183,7 @@ async function searchYouTube(skill: string): Promise<string> {
     throw new Error('No videos found');
     
   } catch (error) {
-    console.error('YouTube search failed for skill:', skill, 'Error:', error.message);
+    console.error('YouTube search failed for skill:', skill, 'Error:', error instanceof Error ? error.message : String(error));
     // Return a generic search as last resort
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
   }
