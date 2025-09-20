@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/get-role-skills/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}
