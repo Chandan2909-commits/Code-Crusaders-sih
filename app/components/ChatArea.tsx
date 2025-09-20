@@ -89,7 +89,6 @@ export default function ChatArea({ messages, onSendMessage, isLoading }: ChatAre
               style={{ width: '250px', height: 'auto', marginBottom: '0px' }}
             />
             <h1 className="empty-title">How can I help you today?</h1>
-            <p className="empty-subtitle">Start a conversation or use the tools above to analyze your skills and find job recommendations.</p>
           </div>
         ) : (
           <>
