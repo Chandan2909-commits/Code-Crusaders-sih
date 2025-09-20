@@ -136,48 +136,71 @@ const curatedVideos: { [key: string]: string } = {
 
 async function searchYouTube(skill: string, favoriteChannel?: string): Promise<string> {
   try {
-    // First try curated videos for common skills
-    const normalizedSkill = skill.toLowerCase().trim();
-    
-    // Check for exact match
-    if (curatedVideos[normalizedSkill]) {
-      console.log(`Using curated video for ${skill}`);
-      return curatedVideos[normalizedSkill];
-    }
-    
-    // Check for partial matches
-    for (const [key, video] of Object.entries(curatedVideos)) {
-      if (normalizedSkill.includes(key) || key.includes(normalizedSkill)) {
-        console.log(`Using curated video for ${skill} (matched ${key})`);
-        return video;
+    // First try curated videos for common skills (only if no favorite channel specified)
+    if (!favoriteChannel) {
+      const normalizedSkill = skill.toLowerCase().trim();
+      
+      // Check for exact match
+      if (curatedVideos[normalizedSkill]) {
+        console.log(`Using curated video for ${skill}`);
+        return curatedVideos[normalizedSkill];
+      }
+      
+      // Check for partial matches
+      for (const [key, video] of Object.entries(curatedVideos)) {
+        if (normalizedSkill.includes(key) || key.includes(normalizedSkill)) {
+          console.log(`Using curated video for ${skill} (matched ${key})`);
+          return video;
+        }
       }
     }
     
-    console.log(`Trying YouTube API for skill: ${skill}`);
+    console.log(`Trying YouTube API for skill: ${skill}${favoriteChannel ? ` from channel: ${favoriteChannel}` : ''}`);
     
     if (!process.env.YOUTUBE_API_KEY) {
       throw new Error('YouTube API key missing');
     }
 
-    const query = favoriteChannel ? `${skill} tutorial channel:${favoriteChannel}` : `${skill} tutorial`;
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoDuration=long&order=viewCount&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`;
-    
-    const searchResponse = await fetch(searchUrl);
-    
-    if (!searchResponse.ok) {
-      const errorData = await searchResponse.json();
-      if (errorData.error?.reason === 'quotaExceeded') {
-        console.log('YouTube API quota exceeded, using generic tutorial link');
-        return `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial')}`;
+    // Try favorite channel first if specified
+    if (favoriteChannel) {
+      const channelQuery = `${skill} tutorial channel:${favoriteChannel}`;
+      const channelSearchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(channelQuery)}&type=video&videoDuration=long&order=viewCount&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`;
+      
+      const channelResponse = await fetch(channelSearchUrl);
+      
+      if (channelResponse.ok) {
+        const channelData = await channelResponse.json();
+        
+        if (channelData.items && channelData.items.length > 0) {
+          const videoUrl = `https://www.youtube.com/watch?v=${channelData.items[0].id.videoId}`;
+          console.log(`Found video from favorite channel ${favoriteChannel}: ${videoUrl}`);
+          return videoUrl;
+        } else {
+          console.log(`No videos found in favorite channel ${favoriteChannel}, trying general search`);
+        }
       }
-      throw new Error(`YouTube API failed: ${searchResponse.status}`);
     }
 
-    const searchData = await searchResponse.json();
+    // Fallback to general search
+    const generalQuery = `${skill} tutorial`;
+    const generalSearchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(generalQuery)}&type=video&videoDuration=long&order=viewCount&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`;
     
-    if (searchData.items && searchData.items.length > 0) {
-      const videoUrl = `https://www.youtube.com/watch?v=${searchData.items[0].id.videoId}`;
-      console.log(`Found YouTube video for ${skill}${favoriteChannel ? ` from ${favoriteChannel}` : ''}: ${videoUrl}`);
+    const generalResponse = await fetch(generalSearchUrl);
+    
+    if (!generalResponse.ok) {
+      const errorData = await generalResponse.json();
+      if (errorData.error?.reason === 'quotaExceeded') {
+        console.log('YouTube API quota exceeded, using generic tutorial link');
+        throw new Error('Quota exceeded');
+      }
+      throw new Error(`YouTube API failed: ${generalResponse.status}`);
+    }
+
+    const generalData = await generalResponse.json();
+    
+    if (generalData.items && generalData.items.length > 0) {
+      const videoUrl = `https://www.youtube.com/watch?v=${generalData.items[0].id.videoId}`;
+      console.log(`Found general YouTube video for ${skill}: ${videoUrl}`);
       return videoUrl;
     }
     
