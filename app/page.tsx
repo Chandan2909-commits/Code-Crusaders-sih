@@ -245,22 +245,42 @@ export default function Home() {
       />
       <div className="flex flex-col" style={{ flex: 1, height: '100vh' }}>
         <div className="bg-orange-50 p-3 border-b border-orange-200 flex-shrink-0" style={{ marginTop: '16px' }}>
-          <a 
-            href="/skills" 
-            style={{
-              backgroundColor: '#ff8c42',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              display: 'inline-block',
-              transition: 'background-color 0.15s ease'
-            }}
-            onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#e67c3a'}
-            onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = '#ff8c42'}
-          >
-            Skill Gap Analysis
-          </a>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <a 
+              href="/skills" 
+              style={{
+                backgroundColor: '#ff8c42',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                display: 'inline-block',
+                transition: 'background-color 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#e67c3a'}
+              onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = '#ff8c42'}
+            >
+              Skill Gap Analysis
+            </a>
+            <a 
+              href="https://sihjre23.streamlit.app/" 
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: '#ff8c42',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                display: 'inline-block',
+                transition: 'background-color 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#e67c3a'}
+              onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = '#ff8c42'}
+            >
+              Job Recommendation Engine
+            </a>
+          </div>
         </div>
         <ChatArea
           messages={messages}

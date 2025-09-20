@@ -82,54 +82,15 @@ export default function ChatArea({ messages, onSendMessage, isLoading }: ChatAre
     <div className="chat-area">
       <div className={`messages-container ${messages.length === 0 ? 'empty-state' : ''}`}>
         {messages.length === 0 ? (
-  <div className="empty-content" style={{ textAlign: 'center' }}>
-      <img 
+          <div className="empty-content">
+            <img 
               src="/Untitled-video-Made-with-Clipc-unscreen.gif"
               alt="How can I help you today?" 
               style={{ width: '250px', height: 'auto', marginBottom: '0px' }}
             />
-    
-    <h1 className="empty-title">How can I help you today?</h1>
-    
-    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '24px' }}>
-      <a
-        href="/skills"
-        style={{
-          backgroundColor: '#ff8c42',
-          color: 'white',
-          padding: '12px 24px',
-          borderRadius: '8px',
-          textDecoration: 'none',
-          fontSize: '14px',
-          fontWeight: '500',
-          transition: 'background-color 0.15s ease'
-        }}
-        onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#e67c3a'}
-        onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = '#ff8c42'}
-      >
-        Skill Gap Analysis
-      </a>
-      <a
-        href="https://sihjre23.streamlit.app/"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          backgroundColor: '#ff8c42',
-          color: 'white',
-          padding: '12px 24px',
-          borderRadius: '8px',
-          textDecoration: 'none',
-          fontSize: '14px',
-          fontWeight: '500',
-          transition: 'background-color 0.15s ease'
-        }}
-        onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#e67c3a'}
-        onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = '#ff8c42'}
-      >
-        Job Recommendation Engine
-      </a>
-    </div>
-  </div>
+            <h1 className="empty-title">How can I help you today?</h1>
+            <p className="empty-subtitle">Start a conversation or use the tools above to analyze your skills and find job recommendations.</p>
+          </div>
         ) : (
           <>
             {messages.map((message, index) => (
