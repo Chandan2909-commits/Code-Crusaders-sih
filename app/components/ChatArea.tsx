@@ -90,6 +90,45 @@ export default function ChatArea({ messages, onSendMessage, isLoading }: ChatAre
             />
     
     <h1 className="empty-title">How can I help you today?</h1>
+    
+    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '24px' }}>
+      <a
+        href="/skills"
+        style={{
+          backgroundColor: '#ff8c42',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '8px',
+          textDecoration: 'none',
+          fontSize: '14px',
+          fontWeight: '500',
+          transition: 'background-color 0.15s ease'
+        }}
+        onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#e67c3a'}
+        onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = '#ff8c42'}
+      >
+        Skill Gap Analysis
+      </a>
+      <a
+        href="https://sihjre23.streamlit.app/"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          backgroundColor: '#ff8c42',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '8px',
+          textDecoration: 'none',
+          fontSize: '14px',
+          fontWeight: '500',
+          transition: 'background-color 0.15s ease'
+        }}
+        onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#e67c3a'}
+        onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = '#ff8c42'}
+      >
+        Job Recommendation Engine
+      </a>
+    </div>
   </div>
         ) : (
           <>
