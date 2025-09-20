@@ -24,7 +24,8 @@ export default function SkillsPage() {
   const [formData, setFormData] = useState({
     role: '',
     company: '',
-    skills: ''
+    skills: '',
+    favoriteChannel: ''
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SkillAnalysisResponse | null>(null);
@@ -46,6 +47,7 @@ export default function SkillsPage() {
           role: formData.role,
           company: formData.company,
           skills: skillsArray,
+          favoriteChannel: formData.favoriteChannel.trim() || undefined,
         }),
       });
 
@@ -189,6 +191,35 @@ export default function SkillsPage() {
                 value={formData.skills}
                 onChange={(e) => setFormData({...formData, skills: e.target.value})}
                 placeholder="e.g., Python, DSA, React (or leave empty for beginner roadmap)"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #fed7aa',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  outline: 'none'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ 
+                display: 'block', 
+                color: '#000000', 
+                fontWeight: '500', 
+                marginBottom: '8px' 
+              }}>
+                Favorite YouTube Channel (optional)
+                <span style={{ color: '#6b7280', fontWeight: '400', fontSize: '14px' }}>
+                  {' '}• We'll prioritize videos from this channel
+                </span>
+              </label>
+              <input
+                type="text"
+                value={formData.favoriteChannel}
+                onChange={(e) => setFormData({...formData, favoriteChannel: e.target.value})}
+                placeholder="e.g., freeCodeCamp, Traversy Media, CodeWithHarry"
                 style={{
                   width: '100%',
                   padding: '12px',

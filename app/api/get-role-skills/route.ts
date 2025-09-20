@@ -9,6 +9,7 @@ interface SkillAnalysisRequest {
   role: string;
   company: string;
   skills: string[];
+  favoriteChannel?: string;
 }
 
 interface MissingSkill {
@@ -133,7 +134,7 @@ const curatedVideos: { [key: string]: string } = {
   'kubernetes': 'https://www.youtube.com/watch?v=X48VuDVv0do'
 };
 
-async function searchYouTube(skill: string): Promise<string> {
+async function searchYouTube(skill: string, favoriteChannel?: string): Promise<string> {
   try {
     // First try curated videos for common skills
     const normalizedSkill = skill.toLowerCase().trim();
@@ -158,7 +159,7 @@ async function searchYouTube(skill: string): Promise<string> {
       throw new Error('YouTube API key missing');
     }
 
-    const query = `${skill} tutorial`;
+    const query = favoriteChannel ? `${skill} tutorial channel:${favoriteChannel}` : `${skill} tutorial`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoDuration=long&order=viewCount&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`;
     
     const searchResponse = await fetch(searchUrl);
@@ -176,7 +177,7 @@ async function searchYouTube(skill: string): Promise<string> {
     
     if (searchData.items && searchData.items.length > 0) {
       const videoUrl = `https://www.youtube.com/watch?v=${searchData.items[0].id.videoId}`;
-      console.log(`Found YouTube video for ${skill}: ${videoUrl}`);
+      console.log(`Found YouTube video for ${skill}${favoriteChannel ? ` from ${favoriteChannel}` : ''}: ${videoUrl}`);
       return videoUrl;
     }
     
@@ -197,7 +198,7 @@ export async function POST(request: NextRequest) {
     console.log('TAVILY_API_KEY exists:', !!process.env.TAVILY_API_KEY);
 
     const body: SkillAnalysisRequest = await request.json();
-    const { role, company, skills } = body;
+    const { role, company, skills, favoriteChannel } = body;
     console.log('Request body:', { role, company, skills });
     
     // Handle beginners with no skills
@@ -213,13 +214,13 @@ export async function POST(request: NextRequest) {
       
       // Get beginner skills with videos
       for (const skill of beginnerSkills) {
-        const videoUrl = await searchYouTube(skill);
+        const videoUrl = await searchYouTube(skill, favoriteChannel);
         beginnerRoadmap.push({ skill, video: videoUrl });
       }
       
       // Get advanced skills with videos
       for (const skill of advancedSkills) {
-        const videoUrl = await searchYouTube(skill);
+        const videoUrl = await searchYouTube(skill, favoriteChannel);
         advancedRoadmap.push({ skill, video: videoUrl });
       }
       
@@ -322,7 +323,7 @@ Focus on technical skills only. Keep skill names concise (1-3 words).
       if (cleanSkill.length === 0) continue;
       
       console.log('Searching YouTube for:', cleanSkill);
-      const videoUrl = await searchYouTube(cleanSkill);
+      const videoUrl = await searchYouTube(cleanSkill, favoriteChannel);
       skillsWithVideos.push({
         skill: cleanSkill,
         video: videoUrl
