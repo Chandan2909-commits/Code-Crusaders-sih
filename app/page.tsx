@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import { Chat, Message } from './types';
-import { supabase } from './lib/supabase';
+import { getDatabase } from './lib/mongodb';
 
 export default function Home() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -20,17 +20,16 @@ export default function Home() {
 
   const loadChats = async () => {
     try {
-      const { data, error } = await supabase
-        .from('chats')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading chats:', error);
-        return;
-      }
-
-      setChats(data || []);
+      const db = await getDatabase();
+      const chatsCollection = db.collection('chats');
+      const data = await chatsCollection.find({}).sort({ updated_at: -1 }).toArray();
+      
+      setChats(data.map(chat => ({
+        ...chat,
+        id: chat._id.toString(),
+        created_at: new Date(chat.created_at),
+        updated_at: new Date(chat.updated_at)
+      })));
     } catch (error) {
       console.error('Error loading chats:', error);
     }
@@ -39,19 +38,16 @@ export default function Home() {
   const loadMessages = async (chatId: string) => {
     try {
       console.log('Loading messages for chat:', chatId);
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('timestamp', { ascending: true });
-
-      if (error) {
-        console.error('Error loading messages:', error);
-        return;
-      }
-
+      const db = await getDatabase();
+      const messagesCollection = db.collection('messages');
+      const data = await messagesCollection.find({ chat_id: chatId }).sort({ timestamp: 1 }).toArray();
+      
       console.log('Loaded messages:', data);
-      setMessages(data || []);
+      setMessages(data.map(msg => ({
+        ...msg,
+        id: msg._id.toString(),
+        timestamp: new Date(msg.timestamp)
+      })));
     } catch (error) {
       console.error('Error loading messages:', error);
     }
@@ -73,19 +69,14 @@ export default function Home() {
     };
 
     try {
-      const { error } = await supabase
-        .from('chats')
-        .insert([{
-          id: newChat.id,
-          title: newChat.title,
-          created_at: newChat.created_at,
-          updated_at: newChat.updated_at,
-        }]);
-
-      if (error) {
-        console.error('Error creating chat:', error);
-        return;
-      }
+      const db = await getDatabase();
+      const chatsCollection = db.collection('chats');
+      await chatsCollection.insertOne({
+        _id: newChat.id,
+        title: newChat.title,
+        created_at: newChat.created_at,
+        updated_at: newChat.updated_at,
+      });
 
       setChats(prev => [newChat, ...prev]);
       setActiveChat(newChatId);
@@ -112,30 +103,24 @@ export default function Home() {
       };
 
       try {
-        const { error } = await supabase
-          .from('chats')
-          .insert([{
-            id: newChat.id,
-            title: newChat.title,
-            created_at: newChat.created_at,
-            updated_at: newChat.updated_at,
-          }]);
-
-        if (error) {
-          console.error('Error creating chat:', error);
-          // Continue without saving to database
-        }
+        const db = await getDatabase();
+        const chatsCollection = db.collection('chats');
+        await chatsCollection.insertOne({
+          _id: newChat.id,
+          title: newChat.title,
+          created_at: newChat.created_at,
+          updated_at: newChat.updated_at,
+        });
 
         setChats(prev => [newChat, ...prev]);
         setActiveChat(newChatId);
-        setMessages([]); // Clear messages for new chat
+        setMessages([]);
         chatId = newChatId;
       } catch (error) {
         console.error('Error creating chat:', error);
-        // Continue without saving to database
         chatId = uuidv4();
         setActiveChat(chatId);
-        setMessages([]); // Clear messages for new chat
+        setMessages([]);
       }
     }
 
@@ -150,20 +135,20 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      // Save user message to Supabase
+      // Save user message to MongoDB
       if (chatId) {
-        const { error: userMsgError } = await supabase
-          .from('messages')
-          .insert([{
-            id: userMessage.id,
+        try {
+          const db = await getDatabase();
+          const messagesCollection = db.collection('messages');
+          await messagesCollection.insertOne({
+            _id: userMessage.id,
             chat_id: chatId,
             content: userMessage.content,
             role: userMessage.role,
             timestamp: userMessage.timestamp,
-          }]);
-        
-        if (userMsgError) {
-          console.error('Error saving user message:', userMsgError);
+          });
+        } catch (error) {
+          console.error('Error saving user message:', error);
         }
       }
 
@@ -193,36 +178,37 @@ export default function Home() {
 
         setMessages(prev => [...prev, assistantMessage]);
 
-        // Save assistant message to Supabase
+        // Save assistant message to MongoDB
         if (chatId) {
-          const { error: assistantMsgError } = await supabase
-            .from('messages')
-            .insert([{
-              id: assistantMessage.id,
+          try {
+            const db = await getDatabase();
+            const messagesCollection = db.collection('messages');
+            await messagesCollection.insertOne({
+              _id: assistantMessage.id,
               chat_id: chatId,
               content: assistantMessage.content,
               role: assistantMessage.role,
               timestamp: assistantMessage.timestamp,
-            }]);
-          
-          if (assistantMsgError) {
-            console.error('Error saving assistant message:', assistantMsgError);
-          }
+            });
 
-          // Update chat title if it's the first message
-          const currentChat = chats.find(c => c.id === chatId);
-          if (currentChat && currentChat.title === 'New Chat') {
-            const newTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
-            await supabase
-              .from('chats')
-              .update({ title: newTitle, updated_at: new Date() })
-              .eq('id', chatId);
+            // Update chat title if it's the first message
+            const currentChat = chats.find(c => c.id === chatId);
+            if (currentChat && currentChat.title === 'New Chat') {
+              const newTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+              const chatsCollection = db.collection('chats');
+              await chatsCollection.updateOne(
+                { _id: chatId },
+                { $set: { title: newTitle, updated_at: new Date() } }
+              );
 
-            setChats(prev => prev.map(chat => 
-              chat.id === chatId 
-                ? { ...chat, title: newTitle, updated_at: new Date() }
-                : chat
-            ));
+              setChats(prev => prev.map(chat => 
+                chat.id === chatId 
+                  ? { ...chat, title: newTitle, updated_at: new Date() }
+                  : chat
+              ));
+            }
+          } catch (error) {
+            console.error('Error saving assistant message:', error);
           }
         }
       }

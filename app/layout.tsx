@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Chat-interface-sih',
+  title: 'Chat-interface',
   description: 'A beautiful ChatGPT-like interface built with Next.js',
 }
 
