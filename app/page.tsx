@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import { Chat, Message } from './types';
-import { getDatabase } from './lib/mongodb';
+import { prisma } from './lib/prisma';
 
 export default function Home() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -20,15 +20,16 @@ export default function Home() {
 
   const loadChats = async () => {
     try {
-      const db = await getDatabase();
-      const chatsCollection = db.collection('chats');
-      const data = await chatsCollection.find({}).sort({ updated_at: -1 }).toArray();
+      const data = await prisma.chat.findMany({
+        orderBy: { updatedAt: 'desc' }
+      });
       
       setChats(data.map(chat => ({
-        ...chat,
-        id: chat._id.toString(),
-        created_at: new Date(chat.created_at),
-        updated_at: new Date(chat.updated_at)
+        id: chat.id,
+        title: chat.title,
+        messages: [],
+        created_at: chat.createdAt,
+        updated_at: chat.updatedAt
       })));
     } catch (error) {
       console.error('Error loading chats:', error);
@@ -38,15 +39,17 @@ export default function Home() {
   const loadMessages = async (chatId: string) => {
     try {
       console.log('Loading messages for chat:', chatId);
-      const db = await getDatabase();
-      const messagesCollection = db.collection('messages');
-      const data = await messagesCollection.find({ chat_id: chatId }).sort({ timestamp: 1 }).toArray();
+      const data = await prisma.message.findMany({
+        where: { chatId },
+        orderBy: { timestamp: 'asc' }
+      });
       
       console.log('Loaded messages:', data);
       setMessages(data.map(msg => ({
-        ...msg,
-        id: msg._id.toString(),
-        timestamp: new Date(msg.timestamp)
+        id: msg.id,
+        content: msg.content,
+        role: msg.role as 'user' | 'assistant',
+        timestamp: msg.timestamp
       })));
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -69,13 +72,11 @@ export default function Home() {
     };
 
     try {
-      const db = await getDatabase();
-      const chatsCollection = db.collection('chats');
-      await chatsCollection.insertOne({
-        _id: newChat.id,
-        title: newChat.title,
-        created_at: newChat.created_at,
-        updated_at: newChat.updated_at,
+      await prisma.chat.create({
+        data: {
+          id: newChat.id,
+          title: newChat.title
+        }
       });
 
       setChats(prev => [newChat, ...prev]);
@@ -103,13 +104,11 @@ export default function Home() {
       };
 
       try {
-        const db = await getDatabase();
-        const chatsCollection = db.collection('chats');
-        await chatsCollection.insertOne({
-          _id: newChat.id,
-          title: newChat.title,
-          created_at: newChat.created_at,
-          updated_at: newChat.updated_at,
+        await prisma.chat.create({
+          data: {
+            id: newChat.id,
+            title: newChat.title
+          }
         });
 
         setChats(prev => [newChat, ...prev]);
@@ -135,17 +134,17 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      // Save user message to MongoDB
+      // Save user message to SQLite
       if (chatId) {
         try {
-          const db = await getDatabase();
-          const messagesCollection = db.collection('messages');
-          await messagesCollection.insertOne({
-            _id: userMessage.id,
-            chat_id: chatId,
-            content: userMessage.content,
-            role: userMessage.role,
-            timestamp: userMessage.timestamp,
+          await prisma.message.create({
+            data: {
+              id: userMessage.id,
+              chatId: chatId,
+              content: userMessage.content,
+              role: userMessage.role,
+              timestamp: userMessage.timestamp
+            }
           });
         } catch (error) {
           console.error('Error saving user message:', error);
@@ -178,28 +177,27 @@ export default function Home() {
 
         setMessages(prev => [...prev, assistantMessage]);
 
-        // Save assistant message to MongoDB
+        // Save assistant message to SQLite
         if (chatId) {
           try {
-            const db = await getDatabase();
-            const messagesCollection = db.collection('messages');
-            await messagesCollection.insertOne({
-              _id: assistantMessage.id,
-              chat_id: chatId,
-              content: assistantMessage.content,
-              role: assistantMessage.role,
-              timestamp: assistantMessage.timestamp,
+            await prisma.message.create({
+              data: {
+                id: assistantMessage.id,
+                chatId: chatId,
+                content: assistantMessage.content,
+                role: assistantMessage.role,
+                timestamp: assistantMessage.timestamp
+              }
             });
 
             // Update chat title if it's the first message
             const currentChat = chats.find(c => c.id === chatId);
             if (currentChat && currentChat.title === 'New Chat') {
               const newTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
-              const chatsCollection = db.collection('chats');
-              await chatsCollection.updateOne(
-                { _id: chatId },
-                { $set: { title: newTitle, updated_at: new Date() } }
-              );
+              await prisma.chat.update({
+                where: { id: chatId },
+                data: { title: newTitle }
+              });
 
               setChats(prev => prev.map(chat => 
                 chat.id === chatId 
